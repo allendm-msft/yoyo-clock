@@ -12,6 +12,13 @@ struct PreferencesView: View {
     private let hours = Array(0...23)
 
     var body: some View {
+        ScrollView {
+            preferencesContent
+        }
+        .frame(height: 620)
+    }
+
+    private var preferencesContent: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("yoyo clock")
@@ -101,12 +108,29 @@ struct PreferencesView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "speaker.fill")
                     Slider(value: $settings.volume, in: 0...1)
+                        .accessibilityLabel("Chime and announcement volume")
                     Image(systemName: "speaker.wave.3.fill")
                     Text("\(Int((settings.volume * 100).rounded()))%")
                         .monospacedDigit()
                         .frame(width: 44, alignment: .trailing)
                 }
-                .disabled(!settings.soundEnabled)
+                .disabled(!settings.soundEnabled && !settings.announceTime)
+            }
+
+            Divider()
+
+            section("Time announcements") {
+                Toggle("Announce time when the yo-yo drops", isOn: $settings.announceTime)
+                Text("Uses an English (Ireland) voice and the volume slider above, independently of the chime sound. Test it with the Yo-yo Test button.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if TimeAnnouncer.irishVoice == nil {
+                    Text("Install an English (Ireland) voice such as Moira in macOS Accessibility voice settings to enable Irish speech.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             Divider()

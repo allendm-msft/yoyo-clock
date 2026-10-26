@@ -75,10 +75,23 @@ ad hoc for local use. To keep it installed, quit the running app, copy
 | Play a sound / Sound / Volume | Enable audio, pick a sound, and set 0–100% playback volume |
 | Quiet hours | Suppress scheduled chimes between the selected hours |
 | Launch at Login | Request automatic startup through macOS |
+| Announce Time (Irish Voice) | Speak the current time whenever the yo-yo drops; toggle from the menu or Preferences |
 
 Each effect has its own **Test** button in Preferences. Manual tests preview
 effects immediately, including during quiet hours. Audio volume is relative
 to your Mac's output volume and does not override system mute.
+
+**Announce Time (Irish Voice)** is built into the app and enabled by default.
+Whenever the yo-yo drops, including its Test button, it speaks the current time
+using an installed English (Ireland) voice such as **Moira**. It uses the app's
+volume slider, independently of the chime sound toggle. Scheduled speech follows
+quiet hours and pauses with chimes; disabling the yo-yo also suppresses speech.
+Repeated triggers replace the previous announcement rather than queueing it.
+
+If no Irish voice is installed, the app explains how to install one in macOS
+Accessibility voice settings; it never silently substitutes a different accent.
+It does not change macOS Clock Options. If you previously enabled macOS's own
+time announcements, disable them there to avoid duplicate announcements.
 
 ### Timing, explained
 
@@ -94,6 +107,9 @@ On secondary displays, the yo-yo mirrors the clock's distance from the right
 edge; exact alignment can differ when menu bar layouts differ between screens.
 
 ## Under the hood
+
+Run `bash test.sh` to check time phrasing and Irish voice selection without
+playing audio or changing system settings.
 
 | File | Responsibility |
 | --- | --- |

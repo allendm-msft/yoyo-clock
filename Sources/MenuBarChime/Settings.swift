@@ -34,6 +34,7 @@ private enum Key {
     static let soundName = "soundName"
     static let volume = "soundVolume"
     static let explosionEnabled = "explosionEnabled"
+    static let announceTime = "announceTime"
     static let yoyoEnabled = "yoyoEnabled"
     static let yoyoDuration = "yoyoDuration"
     static let quietHoursEnabled = "quietHoursEnabled"
@@ -56,6 +57,7 @@ final class Settings: ObservableObject {
             Key.soundName: SoundPlayer.defaultSoundName,
             Key.volume: 0.6,
             Key.explosionEnabled: true,
+            Key.announceTime: true,
             Key.yoyoEnabled: true,
             Key.yoyoDuration: 3.0,
             Key.quietHoursEnabled: false,
@@ -86,6 +88,10 @@ final class Settings: ObservableObject {
 
     @Published var explosionEnabled: Bool = true {
         didSet { defaults.set(explosionEnabled, forKey: Key.explosionEnabled) }
+    }
+
+    @Published var announceTime: Bool = true {
+        didSet { defaults.set(announceTime, forKey: Key.announceTime) }
     }
 
     @Published var soundEnabled: Bool = true {
@@ -140,6 +146,7 @@ final class Settings: ObservableObject {
         blinkEnabled = defaults.bool(forKey: Key.blinkEnabled)
         blinkCount = max(1, min(defaults.integer(forKey: Key.blinkCount), 20))
         explosionEnabled = defaults.bool(forKey: Key.explosionEnabled)
+        announceTime = defaults.bool(forKey: Key.announceTime)
         soundEnabled = defaults.bool(forKey: Key.soundEnabled)
         soundName = defaults.string(forKey: Key.soundName) ?? SoundPlayer.defaultSoundName
         volume = min(max(defaults.double(forKey: Key.volume), 0), 1)

@@ -3,9 +3,10 @@ import Combine
 import ServiceManagement
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate {
     private let settings = Settings.shared
     private let soundPlayer = SoundPlayer()
+    private let timeAnnouncer = TimeAnnouncer()
     private let yoyoAnimator = YoyoAnimator()
     private var scheduler: ChimeScheduler!
     private var blinker: Blinker!
@@ -16,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var nextChimeMenuItem: NSMenuItem!
     private var enabledMenuItem: NSMenuItem!
     private var launchAtLoginMenuItem: NSMenuItem!
+    private var timeAnnouncementMenuItem: NSMenuItem!
     private var menuRefreshTimer: Timer?
 
     private var isEnabled = true
@@ -60,7 +62,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         settings.objectWillChange
             .receive(on: RunLoop.main)
-            .sink { [weak self] in self?.refreshMenuState() }
+            .sink { [weak self] in
+                guard let self else { return }
+                self.refreshMenuState()
+                if !self.settings.announceTime || !self.settings.yoyoEnabled {
+                    self.timeAnnouncer.stop()
+                }
+            }
             .store(in: &cancellables)
 
         let refresh = Timer(timeInterval: 20, repeats: true) { [weak self] _ in
@@ -77,6 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         explosionAnimator?.stop()
         yoyoAnimator.stop()
         soundPlayer.stop()
+        timeAnnouncer.stop()
     }
 
     // MARK: - Chime
@@ -102,7 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
 
         if settings.yoyoEnabled, let button = statusItem.button {
-            yoyoAnimator.play(from: button, duration: settings.yoyoDuration)
+            playYoyo(from: button)
         }
         if settings.soundEnabled {
             soundPlayer.play(named: settings.soundName, volume: settings.volume)
@@ -114,6 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func buildMenu() {
         let menu = NSMenu()
         menu.autoenablesItems = false
+        menu.delegate = self
 
         nextChimeMenuItem = NSMenuItem(title: "Next chime: —", action: nil, keyEquivalent: "")
         nextChimeMenuItem.isEnabled = false
@@ -147,6 +157,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         testItem.target = self
         menu.addItem(testItem)
 
+        timeAnnouncementMenuItem = NSMenuItem(
+            title: "Announce Time (Irish Voice)",
+            action: #selector(toggleTimeAnnouncements),
+            keyEquivalent: ""
+        )
+        timeAnnouncementMenuItem.target = self
+        menu.addItem(timeAnnouncementMenuItem)
+
         menu.addItem(.separator())
 
         let prefsItem = NSMenuItem(title: "Preferences…",
@@ -173,6 +191,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func refreshMenuState() {
         enabledMenuItem?.state = isEnabled ? .on : .off
+        refreshTimeAnnouncementState()
 
         if let intervalMenu = statusItem.menu?.item(withTitle: "Interval")?.submenu {
             for item in intervalMenu.items {
@@ -206,6 +225,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        refreshMenuState()
+    }
+
+    private func refreshTimeAnnouncementState() {
+        guard let item = timeAnnouncementMenuItem else { return }
+        item.state = settings.announceTime ? .on : .off
+        item.toolTip = "Speak the current time in an Irish voice whenever the yo-yo drops. Uses the app's volume setting."
+    }
+
+    @objc private func toggleTimeAnnouncements() {
+        settings.announceTime.toggle()
+        if !settings.announceTime { timeAnnouncer.stop() }
+        refreshTimeAnnouncementState()
+    }
+
+    private func playYoyo(from button: NSStatusBarButton) {
+        yoyoAnimator.play(from: button, duration: settings.yoyoDuration)
+        guard settings.announceTime else { return }
+        do {
+            try timeAnnouncer.announce(at: Date(), volume: settings.volume)
+        } catch {
+            NSLog("yoyo clock: time announcement failed: \(error.localizedDescription)")
+            let alert = NSAlert()
+            alert.messageText = "Irish voice unavailable"
+            alert.informativeText = error.localizedDescription
+            alert.alertStyle = .warning
+            NSApp.activate(ignoringOtherApps: true)
+            alert.runModal()
+        }
+    }
+
     @objc private func toggleEnabled() {
         isEnabled.toggle()
         if isEnabled {
@@ -216,6 +267,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             explosionAnimator.stop()
             yoyoAnimator.stop()
             soundPlayer.stop()
+            timeAnnouncer.stop()
         }
         refreshMenuState()
     }
@@ -250,7 +302,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 },
                 onPreviewYoyo: { [weak self] in
                     guard let self, let button = self.statusItem.button else { return }
-                    self.yoyoAnimator.play(from: button, duration: self.settings.yoyoDuration)
+                    self.playYoyo(from: button)
                 }
             )
 
